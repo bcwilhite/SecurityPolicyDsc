@@ -29,7 +29,7 @@ Invoke-TestSetup
 try
 {
     InModuleScope 'MSFT_AccountPolicy' {
-        
+
         $dscResourceInfo = Get-DscResource -Name AccountPolicy -Module SecurityPolicyDsc
         $testParameters = @{
             Name = 'Test'
@@ -38,40 +38,6 @@ try
         }
 
         Describe 'SecurityOptionHelperTests' {
-            Context 'Get-AccountPolicyData' {
-                $dataFilePath = Join-Path -Path $dscResourceInfo.ParentPath -ChildPath AccountPolicyData.psd1
-                $accountPolicyData = Get-PolicyOptionData -FilePath $dataFilePath.Normalize()
-                $accountPolicyPropertyList = $dscResourceInfo.Properties | Where-Object -FilterScript { $PSItem.Name -match '_' }
-
-                It 'Should have the same count as property count' {
-                    $accountPolicyDataPropertyCount = $accountPolicyData.Count                    
-                    $accountPolicyDataPropertyCount | Should Be $accountPolicyPropertyList.Name.Count
-                }
-
-                foreach ( $name in $accountPolicyData.Keys )
-                {
-                    It "Should contain property name: $name" {                        
-                        $accountPolicyPropertyList.Name -contains $name | Should Be $true                        
-                    }
-                }
-                
-                $optionData = Get-PolicyOptionData -FilePath $dataFilePath.Normalize()
-                
-                foreach ($option in $optionData.GetEnumerator())
-                {
-                    Context "$($option.Name)"{
-                        $options = $option.Value.Option
-                    
-                        foreach ($entry in $options.GetEnumerator())
-                        {
-                            It "$($entry.Name) Should have string as Option type" {
-                                $entry.value.GetType().Name -is [string] | Should Be $true
-                            }
-                        }
-                    }
-                }
-            }
-
             Context 'Add-PolicyOption' {
                 It 'Should have [System Access]' {
                     [string[]]$testString = "EnableAdminAccount=1"
@@ -83,7 +49,7 @@ try
                     [string[]]$testString = "MaxClockSkew=5"
                     [string]$addOptionResult = Add-PolicyOption -KerberosPolicies $testString
 
-                    $addOptionResult | Should Match '[Kerberos Policy]'    
+                    $addOptionResult | Should Match '[Kerberos Policy]'
                 }
             }
         }
@@ -141,13 +107,13 @@ try
         }
         Describe 'Set-TargetResource' {
             Mock -CommandName Invoke-Secedit -MockWith {}
-            
+
             Context 'Successfully applied account policy' {
                 Mock -CommandName Test-TargetResource -MockWith { $true }
                 It 'Should not throw when successfully updated account policy' {
                     { Set-TargetResource @testParameters } | Should Not throw
                 }
-                
+
                 It 'Should call Test-TargetResource 2 times' {
                     Assert-MockCalled -CommandName Test-TargetResource -Times 2
                 }
@@ -164,8 +130,8 @@ try
             }
 
             It "Should call Invoke-Secedit 2 times" {
-                Assert-MockCalled -CommandName Invoke-Secedit -Times 2                
-            }            
+                Assert-MockCalled -CommandName Invoke-Secedit -Times 2
+            }
         }
     }
 }

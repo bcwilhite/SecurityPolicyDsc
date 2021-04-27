@@ -23,17 +23,17 @@ function Get-TargetResource
 
     $returnValue = @{}
     $currentSecurityPolicy = Get-SecurityPolicy -Area SECURITYPOLICY
-    $accountPolicyData = Get-PolicyOptionData -FilePath $("$PSScriptRoot\AccountPolicyData.psd1").Normalize()
-    $accountPolicyList = Get-PolicyOptionList -ModuleName MSFT_AccountPolicy
+    $policyDataFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'AccountPolicyData.psd1'
+    $accountPolicyData = Import-PowerShellDataFile -Path $policyDataFilePath
 
-    foreach ($accountPolicy in $accountPolicyList)
+    foreach ($accountPolicy in $accountPolicyData.Keys)
     {
         Write-Verbose -Message $accountPolicy
-        $section = $accountPolicyData.$accountPolicy.Section
+        $section = $accountPolicyData[$accountPolicy].Section
         Write-Verbose -Message ($script:localizedData.Section -f $section)
-        $valueName = $accountPolicyData.$accountPolicy.Value
+        $valueName = $accountPolicyData[$accountPolicy].Value
         Write-Verbose -Message ($script:localizedData.Value -f $valueName)
-        $options = $accountPolicyData.$accountPolicy.Option
+        $options = $accountPolicyData[$accountPolicy].Option
         Write-Verbose -Message ($script:localizedData.Option -f $($options -join ','))
         $currentValue = $currentSecurityPolicy.$section.$valueName
         Write-Verbose -Message ($script:localizedData.RawValue -f $($currentValue -join ','))
@@ -155,12 +155,12 @@ function Set-TargetResource
     $kerberosPolicies = @()
     $systemAccessPolicies = @()
     $nonComplaintPolicies = @()
-    $accountPolicyList = Get-PolicyOptionList -ModuleName MSFT_AccountPolicy
-    $accountPolicyData = Get-PolicyOptionData -FilePath $("$PSScriptRoot\AccountPolicyData.psd1").Normalize()
+    $policyDataFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'AccountPolicyData.psd1'
+    $accountPolicyData = Import-PowerShellDataFile -Path $policyDataFilePath
     $script:seceditOutput = "$env:TEMP\Secedit-OutPut.txt"
     $accountPolicyToAddInf = "$env:TEMP\accountPolicyToAdd.inf"
 
-    $desiredPolicies = $PSBoundParameters.GetEnumerator() | Where-Object -FilterScript { $PSItem.key -in $accountPolicyList }
+    $desiredPolicies = $PSBoundParameters.GetEnumerator() | Where-Object -FilterScript {$PSItem.key -in $accountPolicyData.Keys}
 
     foreach ($policy in $desiredPolicies)
     {
@@ -170,7 +170,7 @@ function Set-TargetResource
             Verbose     = $false
         }
 
-        <# 
+        <#
             Define what policies are not in a desired state so we only add those policies
             that need to be changed to the INF.
          #>
@@ -191,7 +191,7 @@ function Set-TargetResource
                             This addresses the scenario when the desired value of Maximum_Password_Age is 0.
                             The INF file consumed by secedit.exe requires the value to be -1.
                         #>
-                        $newValue = -1                        
+                        $newValue = -1
                     }
                     else
                     {
